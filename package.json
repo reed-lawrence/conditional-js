@@ -1,6 +1,6 @@
 {
   "name": "conditionaljs",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Lightweight JS library to create conditional formatting for charts, infographics, and more",
   "main": "index.js",
   "scripts": {

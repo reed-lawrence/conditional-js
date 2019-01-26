@@ -133,8 +133,7 @@ var conditional = function() {
     getRandomMaterialDesignColor: getRandomMaterialDesignColor,
     getConditionalValueColor: getConditionalValueColor,
     generateThreeWayGradient: generateThreeWayGradient,
-    generateTwoWayGradient: generateTwoWayGradient,
-    test: 'some val'
+    generateTwoWayGradient: generateTwoWayGradient
   }
 }
 

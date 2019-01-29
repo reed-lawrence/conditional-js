@@ -1,10 +1,36 @@
-var conditional = function() {
+var conditional = function () {
   const materialColors = ['#ef5350', '#EC407A', '#AB47BC', '#7E57C2', '#5C6BC0', '#42A5F5',
     '#29B6F6', '#26C6DA', '#26A69A', '#66BB6A', '#9CCC65', '#D4E157', '#FFEE58', '#FFCA28', '#FFA726',
     '#FF7043', '#8D6E63', '#BDBDBD', '#78909C'
   ];
 
   const previouslyGenerated = new Array();
+
+  /**
+   * [NOT IMPLEMENTED (WIP)]
+   * @param {number[]} numberArray 
+   * @param {number} percentile 
+   */
+  function percentile(numberArray, percentile) {
+    const array = JSON.parse(JSON.stringify(numberArray));
+    array.sort((a, b) => a > b ? -1 : a < b ? 1 : 0);
+    const count = array.length;
+
+    // percentile position is number in array + 1 position multiplied by the percentile
+    const position = (count + 1) * percentile;
+
+    // if the position is a whole number, return that number as the percentile placement
+    if (position % 1 === 0) {
+      const percentile = array[position];
+      console.log('percentile: ' + percentile);
+      return percentile;
+    } else {
+      const posRoundUp = Math.ceil(position);
+      const percentile = array[posRoundUp];
+      console.log('percentile: ' + percentile);
+      return percentile;
+    }
+  }
 
   function hex(c) {
     const s = '0123456789abcdef';
@@ -35,21 +61,21 @@ var conditional = function() {
     return color;
   }
 
-  function generateTwoWayGradient(colorEnd, colorStart, colorCount) {
+  function generateTwoWayGradient(colorStart, colorEnd, colorCount) {
 
     // The beginning of your gradient
-    const start = convertToRGB(colorStart);
+    const start = convertToRGB(colorEnd);
 
     // The end of your gradient
-    const end = convertToRGB(colorEnd);
+    const end = convertToRGB(colorStart);
 
-    // The number of colors to compute
+    // The number of colors to generate
     const len = colorCount;
 
     // Alpha blending amount
     let alpha = 0.0;
 
-    const saida = [];
+    const hexarr = [];
 
     for (let i = 0; i < len; i++) {
       const c = [];
@@ -59,14 +85,24 @@ var conditional = function() {
       c[1] = start[1] * alpha + (1 - alpha) * end[1];
       c[2] = start[2] * alpha + (1 - alpha) * end[2];
 
-      saida.push('#' + convertToHex(c));
+      hexarr.push('#' + convertToHex(c));
 
     }
-    return saida;
+    return hexarr;
   }
 
   function generateThreeWayGradient(colorStart, colorMiddle, colorEnd, colorCount) {
-    
+    if (colorCount === 1) {
+      return [colorEnd];
+    } else if (colorCount === 2) {
+      return [colorStart, colorEnd];
+    } else if (colorCount === 3) {
+      return [colorStart, colorMiddle, colorEnd];
+    } else if (colorCount % 2 === 0){
+      colorCount++;
+    }
+
+
     // Divide by two because the two way gradient creates a color list of the full length passed to it
     const _colorCount = colorCount / 2;
 
@@ -75,19 +111,24 @@ var conditional = function() {
 
     const output = [];
 
+    output.push(colorStart);
+
     for (let i = 0; i < ar1.length; i++) {
       output.push(ar1[i]);
     }
 
-    ar2.splice(0, 1);
     for (let i = 0; i < ar2.length; i++) {
-      output.push(ar2[i]);
+      if(output.findIndex(c => c === ar2[i]) === -1){
+        output.push(ar2[i]);
+      }
     }
     return output;
   }
 
   function getConditionalValueColor(value, min, max, colorArray) {
-    console.log('getConditionalValueColor called');
+    if (value === max) {
+      return colorArray[colorArray.length - 1];
+    }
     const step = (max - min) / colorArray.length;
     let cIndex = 0;
     for (let i = min; i < max; i += step) {

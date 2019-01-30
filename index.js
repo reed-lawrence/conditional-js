@@ -4,7 +4,7 @@ var conditional = function () {
     '#FF7043', '#8D6E63', '#BDBDBD', '#78909C'
   ];
 
-  const previouslyGenerated = new Array();
+  let previouslyGenerated = new Array();
 
   /**
    * [NOT IMPLEMENTED (WIP)]
@@ -164,7 +164,8 @@ var conditional = function () {
       const chosenColor = materialColors[randomIndex];
 
       // ensure the color hasn't been picked recently
-      if (previouslyGenerated.indexOf(chosenColor, 0) === -1) {
+      if (previouslyGenerated.findIndex(c => c === chosenColor) === -1) {
+        previouslyGenerated.push(chosenColor);
         return chosenColor;
       }
     }

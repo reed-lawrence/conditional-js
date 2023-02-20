@@ -4,7 +4,8 @@
   "description": "Lightweight JS library to create conditional formatting for charts, infographics, and more",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "rm -rf dist && tsc -p ./",
+    "test": "npm run build && jest --testPathPattern='dist\/test\/.*.js$'"
   },
   "repository": {
     "type": "git",
@@ -22,5 +23,8 @@
   "bugs": {
     "url": "https://github.com/reed-lawrence/ConditionalJS/issues"
   },
-  "homepage": "https://github.com/reed-lawrence/ConditionalJS#readme"
+  "homepage": "https://github.com/reed-lawrence/ConditionalJS#readme",
+  "devDependencies": {
+    "jest": "^29.4.3"
+  }
 }

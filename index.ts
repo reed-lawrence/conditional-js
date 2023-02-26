@@ -1,14 +1,15 @@
 export type RGB = [number, number, number];
-export type Format = 'hex' | 'rgb';
+
+const FORMATS = new Set(['hex', 'rgb'] as const);
+export type Format = typeof FORMATS extends Set<infer T> ? T : never;
 
 export function isRGB(value: any): value is RGB {
   return Array.isArray(value) && value.length === 3 && value.every(v => typeof v === 'number' && v >= 0 && v <= 255);
 }
 
-
 /**
  * Converts an RGB color to a hexadecimal color string
- * @param rgb rgb color triplet
+ * @param rgb RGB color triplet
  * @returns hexadecimal color string
  */
 export function rgbToHex(rgb: RGB, prefix = true) {
@@ -21,6 +22,11 @@ export function rgbToHex(rgb: RGB, prefix = true) {
   }, prefix ? '#' : '');
 }
 
+/**
+ * Converts a hexadecimal color string to an RGB color
+ * @param hex hexadecimal color string
+ * @returns RGB color triplet
+ */
 export function hexToRgb(hex: string): RGB {
   const bigint = parseInt(hex.replace('#', ''), 16);
 
@@ -28,81 +34,71 @@ export function hexToRgb(hex: string): RGB {
   const g = (bigint >> 8) & 255;
   const b = bigint & 255;
 
-
   return [r, g, b] as RGB;
 }
 
-export function twoWayGradient(opts: { start: string | RGB; end: string | RGB; count: number; format: 'rgb' }): RGB[];
-export function twoWayGradient(opts: { start: string | RGB; end: string | RGB; count: number; format: 'hex' }): string[];
-export function twoWayGradient(opts: { start: string | RGB; end: string | RGB; count: number; format: Format }): (RGB | string)[] {
+export function getColor(opts: { value: number; colors: string[] | RGB[]; limits: number[], as: 'rgb' }): RGB;
+export function getColor(opts: { value: number; colors: string[] | RGB[]; limits: number[], as: 'hex' }): string;
+export function getColor(opts: { value: number; colors: string[] | RGB[]; limits: number[] }): string;
+export function getColor(opts: { value: number; colors: string[] | RGB[]; limits: number[], as?: Format }): string | RGB {
 
-  const { count } = opts;
-  const format = opts.format || 'hex';
-  const start = (typeof opts.start === 'string' ? hexToRgb(opts.start) : opts.start);
-  const end = (typeof opts.end === 'string' ? hexToRgb(opts.end) : opts.end);
+  const format = opts.as || 'hex';
+  if (!FORMATS.has(format))
+    throw new Error('Invalid format');
 
-  const output = [] as (RGB | string)[];
+  const color = (() => {
 
-  const step = 1 / (count - 1);
+    const { value, colors, limits } = opts;
 
-  for (let i = 0; i < count; i++) {
+    if (typeof value !== 'number')
+      throw new Error('Value must be a number');
 
-    const rgb = [0, 0, 0] as RGB;
+    const count = colors.length;
 
-    for (let j: 0 | 1 | 2 = 0; j < 3; j++) {
-      rgb[j] = Math.round((start[j] * (1 - (i * step))) + (end[j] * i * step));
-    }
+    if (count < 2)
+      throw new Error('You must provide at least two colors');
 
-    output.push(format === 'hex' ? rgbToHex(rgb) : rgb);
-  }
+    if (opts.limits.length !== count)
+      throw new Error('You must provide a limit for each color');
 
-  return output;
-}
+    if (!limits.every((l) => typeof l === 'number'))
+      throw new Error('Limits must be numbers');
 
-export function getGradientColor(opts: { value: number; colors: string[] | RGB[]; limits: number[] }): string | RGB {
-  const { value, colors, limits } = opts;
+    if (value <= limits[0])
+      return colors[0];
 
-  if (typeof value !== 'number')
-    throw new Error('Value must be a number');
+    else if (value >= limits[count - 1])
+      return colors[count - 1];
 
-  const count = colors.length;
+    else {
+      for (let i = 0; i < count - 1; i++) {
+        if (value >= limits[i] && value <= limits[i + 1]) {
 
-  if (count < 2)
-    throw new Error('You must provide at least two colors');
+          const percent = (value - limits[i]) / (limits[i + 1] - limits[i]);
+          const color1 = (typeof colors[i] === 'string' ? hexToRgb(colors[i] as string) : colors[i]) as RGB;
+          const color2 = (typeof colors[i + 1] === 'string' ? hexToRgb(colors[i + 1] as string) : colors[i + 1]) as RGB;
 
-  if (opts.limits.length !== count)
-    throw new Error('You must provide a limit for each color');
+          const rgb = [0, 0, 0] as RGB;
 
-  if (!limits.every((l) => typeof l === 'number'))
-    throw new Error('Limits must be numbers');
+          for (let j: 0 | 1 | 2 = 0; j < 3; j++) {
+            rgb[j] = Math.round((color1[j] * (1 - percent)) + (color2[j] * percent));
+          }
 
-  if (value <= limits[0])
-    return colors[0];
-
-  else if (value >= limits[count - 1])
-    return colors[count - 1];
-
-  else {
-    for (let i = 0; i < count - 1; i++) {
-      if (value >= limits[i] && value <= limits[i + 1]) {
-
-        // if value == 50
-
-        const start = typeof colors[i] === 'string' ? hexToRgb(colors[i] as string) : isRGB(colors[i]) ? colors[i] as RGB : (() => { throw new Error(`value of getGradientColor -> opts.color is not a string or RGB value at index ${i}`) })(); // [0, 0, 0]
-
-        const startLimit = limits[i]; // 0
-        const endLimit = limits[i + 1]; // 100
-        const range = endLimit - startLimit; // 100
-        const valueRange = value - startLimit; // 50
-
-        const modifier = (valueRange / range); // 50 / 100 = 0.5
-
-        return [start[0] + (range * modifier), start[1] + (range * modifier), start[2] + (range * modifier)] as RGB;
+          return rgb;
+        }
       }
     }
-  }
 
-  throw new Error('Something went wrong');
+    throw new Error('Something went wrong');
+
+  })();
+
+  switch (format) {
+    case 'hex':
+      return isRGB(color) ? rgbToHex(color) : color;
+    case 'rgb':
+      return isRGB(color) ? color : hexToRgb(color);
+  }
 
 }
 

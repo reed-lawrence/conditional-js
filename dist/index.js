@@ -1,13 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRandomMaterialDesignColor = exports.materialColors = exports.getGradientColor = exports.twoWayGradient = exports.hexToRgb = exports.rgbToHex = exports.isRGB = void 0;
+exports.getRandomMaterialDesignColor = exports.materialColors = exports.getColor = exports.hexToRgb = exports.rgbToHex = exports.isRGB = void 0;
+var FORMATS = new Set(['hex', 'rgb']);
 function isRGB(value) {
     return Array.isArray(value) && value.length === 3 && value.every(function (v) { return typeof v === 'number' && v >= 0 && v <= 255; });
 }
 exports.isRGB = isRGB;
 /**
  * Converts an RGB color to a hexadecimal color string
- * @param rgb rgb color triplet
+ * @param rgb RGB color triplet
  * @returns hexadecimal color string
  */
 function rgbToHex(rgb, prefix) {
@@ -20,6 +21,11 @@ function rgbToHex(rgb, prefix) {
     }, prefix ? '#' : '');
 }
 exports.rgbToHex = rgbToHex;
+/**
+ * Converts a hexadecimal color string to an RGB color
+ * @param hex hexadecimal color string
+ * @returns RGB color triplet
+ */
 function hexToRgb(hex) {
     var bigint = parseInt(hex.replace('#', ''), 16);
     var r = (bigint >> 16) & 255;
@@ -28,60 +34,49 @@ function hexToRgb(hex) {
     return [r, g, b];
 }
 exports.hexToRgb = hexToRgb;
-function twoWayGradient(opts) {
-    var count = opts.count;
-    var format = opts.format || 'hex';
-    var start = (typeof opts.start === 'string' ? hexToRgb(opts.start) : opts.start);
-    var end = (typeof opts.end === 'string' ? hexToRgb(opts.end) : opts.end);
-    var output = [];
-    var step = 1 / (count - 1);
-    for (var i = 0; i < count; i++) {
-        var rgb = [0, 0, 0];
-        for (var j = 0; j < 3; j++) {
-            rgb[j] = Math.round((start[j] * (1 - (i * step))) + (end[j] * i * step));
-        }
-        output.push(format === 'hex' ? rgbToHex(rgb) : rgb);
-    }
-    return output;
-}
-exports.twoWayGradient = twoWayGradient;
-function getGradientColor(opts) {
-    var value = opts.value, colors = opts.colors, limits = opts.limits;
-    if (typeof value !== 'number')
-        throw new Error('Value must be a number');
-    var count = colors.length;
-    if (count < 2)
-        throw new Error('You must provide at least two colors');
-    if (opts.limits.length !== count)
-        throw new Error('You must provide a limit for each color');
-    if (!limits.every(function (l) { return typeof l === 'number'; }))
-        throw new Error('Limits must be numbers');
-    if (value <= limits[0])
-        return colors[0];
-    else if (value >= limits[count - 1])
-        return colors[count - 1];
-    else {
-        var _loop_1 = function (i) {
-            if (value >= limits[i] && value <= limits[i + 1]) {
-                // if value == 50
-                var start = typeof colors[i] === 'string' ? hexToRgb(colors[i]) : isRGB(colors[i]) ? colors[i] : (function () { throw new Error("value of getGradientColor -> opts.color is not a string or RGB value at index ".concat(i)); })(); // [0, 0, 0]
-                var startLimit = limits[i]; // 0
-                var endLimit = limits[i + 1]; // 100
-                var range = endLimit - startLimit; // 100
-                var valueRange = value - startLimit; // 50
-                var modifier = (valueRange / range); // 50 / 100 = 0.5
-                return { value: [start[0] + (range * modifier), start[1] + (range * modifier), start[2] + (range * modifier)] };
+function getColor(opts) {
+    var format = opts.as || 'hex';
+    if (!FORMATS.has(format))
+        throw new Error('Invalid format');
+    var color = (function () {
+        var value = opts.value, colors = opts.colors, limits = opts.limits;
+        if (typeof value !== 'number')
+            throw new Error('Value must be a number');
+        var count = colors.length;
+        if (count < 2)
+            throw new Error('You must provide at least two colors');
+        if (opts.limits.length !== count)
+            throw new Error('You must provide a limit for each color');
+        if (!limits.every(function (l) { return typeof l === 'number'; }))
+            throw new Error('Limits must be numbers');
+        if (value <= limits[0])
+            return colors[0];
+        else if (value >= limits[count - 1])
+            return colors[count - 1];
+        else {
+            for (var i = 0; i < count - 1; i++) {
+                if (value >= limits[i] && value <= limits[i + 1]) {
+                    var percent = (value - limits[i]) / (limits[i + 1] - limits[i]);
+                    var color1 = (typeof colors[i] === 'string' ? hexToRgb(colors[i]) : colors[i]);
+                    var color2 = (typeof colors[i + 1] === 'string' ? hexToRgb(colors[i + 1]) : colors[i + 1]);
+                    var rgb = [0, 0, 0];
+                    for (var j = 0; j < 3; j++) {
+                        rgb[j] = Math.round((color1[j] * (1 - percent)) + (color2[j] * percent));
+                    }
+                    return rgb;
+                }
             }
-        };
-        for (var i = 0; i < count - 1; i++) {
-            var state_1 = _loop_1(i);
-            if (typeof state_1 === "object")
-                return state_1.value;
         }
+        throw new Error('Something went wrong');
+    })();
+    switch (format) {
+        case 'hex':
+            return isRGB(color) ? rgbToHex(color) : color;
+        case 'rgb':
+            return isRGB(color) ? color : hexToRgb(color);
     }
-    throw new Error('Something went wrong');
 }
-exports.getGradientColor = getGradientColor;
+exports.getColor = getColor;
 exports.materialColors = ['#ef5350', '#EC407A', '#AB47BC', '#7E57C2', '#5C6BC0', '#42A5F5',
     '#29B6F6', '#26C6DA', '#26A69A', '#66BB6A', '#9CCC65', '#D4E157', '#FFEE58', '#FFCA28', '#FFA726',
     '#FF7043', '#8D6E63', '#BDBDBD', '#78909C'
@@ -91,7 +86,7 @@ function getRandomMaterialDesignColor(previouslyGenerated) {
     if (previouslyGenerated.length === exports.materialColors.length) {
         previouslyGenerated = [];
     }
-    var _loop_2 = function (i) {
+    var _loop_1 = function (i) {
         var randomIndex = Math.floor(Math.random() * exports.materialColors.length);
         var chosenColor = exports.materialColors[randomIndex];
         // ensure the color hasn't been picked recently
@@ -100,9 +95,9 @@ function getRandomMaterialDesignColor(previouslyGenerated) {
         }
     };
     for (var i = 0; i < exports.materialColors.length; i++) {
-        var state_2 = _loop_2(i);
-        if (typeof state_2 === "object")
-            return state_2.value;
+        var state_1 = _loop_1(i);
+        if (typeof state_1 === "object")
+            return state_1.value;
     }
 }
 exports.getRandomMaterialDesignColor = getRandomMaterialDesignColor;
